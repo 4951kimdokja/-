@@ -41,29 +41,55 @@ button {
   font-weight:bold;
 }
 #message {min-height:24px}
+#game {display:none}
+.player-button {
+  background:#334155;
+  color:white;
+  border:2px solid #4ade80;
+}
 </style>
 </head>
 <body>
 <main>
 <h1>끝말잇기</h1>
-<p>현재 단어</p>
-<div id="word">가</div>
-<input id="answer" placeholder="다음 단어 입력">
-<button onclick="play()">단어 입력</button>
-<p id="message">가로 시작하는 단어를 입력해!</p>
-<p>점수: <span id="score">0</span></p>
-<p id="used">사용한 단어: 가</p>
-<button onclick="restart()">다시 시작</button>
+
+<div id="start">
+  <h2>게임 인원 선택</h2>
+  <p>몇 명이서 플레이할까?</p>
+  <button class="player-button" onclick="startGame(2)">2인전</button>
+  <button class="player-button" onclick="startGame(3)">3인전</button>
+  <button class="player-button" onclick="startGame(4)">4인전</button>
+</div>
+
+<div id="game">
+  <p>게임 인원: <span id="players">2</span>인전</p>
+  <p>현재 단어</p>
+  <div id="word">가</div>
+  <input id="answer" placeholder="다음 단어 입력">
+  <button onclick="play()">단어 입력</button>
+  <p id="message">가로 시작하는 단어를 입력해!</p>
+  <p>점수: <span id="score">0</span></p>
+  <p id="used">사용한 단어: 가</p>
+  <button onclick="restart()">다시 시작</button>
+  <button onclick="backToMenu()">인원 선택으로</button>
+</div>
 </main>
 
 <script>
-const starts = [
-"가","나","다","라","마","바","사","아"
-];
+const starts = ["가","나","다","라","마","바","사","아"];
 
 let word = "가";
 let score = 0;
 let used = ["가"];
+let playerCount = 2;
+
+function startGame(count) {
+  playerCount = count;
+  document.getElementById("players").textContent = count;
+  document.getElementById("start").style.display = "none";
+  document.getElementById("game").style.display = "block";
+  restart();
+}
 
 function play() {
   const input = document.getElementById("answer");
@@ -120,6 +146,11 @@ function restart() {
     word + "로 시작하는 단어를 입력해!";
   document.getElementById("answer").value = "";
 }
+
+function backToMenu() {
+  document.getElementById("game").style.display = "none";
+  document.getElementById("start").style.display = "block";
+}
 </script>
 </body>
-  </html>
+</html>
