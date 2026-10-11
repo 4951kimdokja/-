@@ -6,47 +6,48 @@
 <title>끝말잇기</title>
 <style>
 body {
-  background:#101827;
-  color:white;
-  font-family:sans-serif;
-  text-align:center;
-  padding:20px;
+  background: #101827;
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+  padding: 16px;
 }
 main {
-  max-width:400px;
-  margin:20px auto;
-  padding:20px;
-  background:#1e293b;
-  border-radius:20px;
+  max-width: 420px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #1e293b;
+  border-radius: 20px;
 }
-h1 {color:#86efac}
+h1 { color: #86efac; }
 #word {
-  font-size:48px;
-  font-weight:bold;
-  background:#334155;
-  padding:20px;
-  border-radius:12px;
+  font-size: 48px;
+  font-weight: bold;
+  background: #334155;
+  padding: 20px;
+  border-radius: 12px;
 }
-input,button {
-  width:100%;
-  padding:14px;
-  margin-top:12px;
-  box-sizing:border-box;
-  border:0;
-  border-radius:10px;
-  font-size:17px;
+input, button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 10px;
+  font-size: 17px;
 }
 button {
-  background:#4ade80;
-  font-weight:bold;
+  background: #4ade80;
+  font-weight: bold;
 }
-#message {min-height:24px}
-#game {display:none}
 .player-button {
-  background:#334155;
-  color:white;
-  border:2px solid #4ade80;
+  background: #334155;
+  color: white;
+  border: 2px solid #4ade80;
 }
+#message { min-height: 24px; }
+#game { display: none; }
+#status { color: #86efac; }
 </style>
 </head>
 <body>
@@ -59,15 +60,16 @@ button {
   <button class="player-button" onclick="startGame(2)">2인전</button>
   <button class="player-button" onclick="startGame(3)">3인전</button>
   <button class="player-button" onclick="startGame(4)">4인전</button>
+  <p id="status">단어 사전을 불러오는 중...</p>
 </div>
 
 <div id="game">
-  <p>게임 인원: <span id="players">2</span>인전</p>
+  <p><span id="players">2</span>인전</p>
   <p>현재 단어</p>
   <div id="word">가</div>
   <input id="answer" placeholder="다음 단어 입력">
   <button onclick="play()">단어 입력</button>
-  <p id="message">가로 시작하는 단어를 입력해!</p>
+  <p id="message"></p>
   <p>점수: <span id="score">0</span></p>
   <p id="used">사용한 단어: 가</p>
   <button onclick="restart()">다시 시작</button>
@@ -76,14 +78,56 @@ button {
 </main>
 
 <script>
-const starts = ["가","나","다","라","마","바","사","아"];
+const starts = ["가", "나", "다", "라", "마", "바", "사", "아"];
 
 let word = "가";
 let score = 0;
 let used = ["가"];
 let playerCount = 2;
+let validWords = new Set();
+let dictionaryReady = false;
+
+const message = document.getElementById("message");
+const status = document.getElementById("status");
+
+async function loadDictionary() {
+  const sources = [
+    "https://raw.githubusercontent.com/acidsound/korean_wordlist/master/wordslistUnique.txt"
+  ];
+
+  for (const url of sources) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+
+      const text = await response.text();
+      const words = text.split(/\r?\n/)
+        .map(w => w.trim())
+        .filter(w => /^[가-힣]+$/.test(w));
+
+      if (words.length > 1000) {
+        validWords = new Set(words);
+        dictionaryReady = true;
+        status.textContent =
+          "사전 준비 완료! 단어 " + validWords.size + "개";
+        return;
+      }
+    } catch (e) {
+      // 다음 시도 또는 오류 안내
+    }
+  }
+
+  status.textContent =
+    "사전을 불러오지 못했어. 인터넷 연결을 확인해 봐.";
+}
 
 function startGame(count) {
+  if (!dictionaryReady) {
+    status.textContent =
+      "사전이 준비되지 않았어. 잠시 기다리거나 새로고침해!";
+    return;
+  }
+
   playerCount = count;
   document.getElementById("players").textContent = count;
   document.getElementById("start").style.display = "none";
@@ -94,27 +138,37 @@ function startGame(count) {
 function play() {
   const input = document.getElementById("answer");
   const next = input.value.trim();
-  const msg = document.getElementById("message");
+
+  if (!dictionaryReady) {
+    message.textContent = "사전을 불러오는 중이야!";
+    return;
+  }
 
   if (!next) {
-    msg.textContent = "단어를 입력해!";
+    message.textContent = "단어를 입력해!";
     return;
   }
 
   if (!/^[가-힣]+$/.test(next)) {
-    msg.textContent = "한글 단어만 입력해!";
+    message.textContent = "한글 단어만 입력해!";
+    return;
+  }
+
+  if (!validWords.has(next)) {
+    message.textContent = "단어 목록에 없는 단어야!";
     return;
   }
 
   if (used.includes(next)) {
-    msg.textContent = "이미 사용한 단어야!";
+    message.textContent = "이미 사용한 단어야!";
     return;
   }
 
-  if (next[0] !== word[word.length - 1]) {
-    msg.textContent =
-      "마지막 글자 '" + word[word.length - 1] +
-      "'로 시작해야 해!";
+  const last = word[word.length - 1];
+
+  if (next[0] !== last) {
+    message.textContent =
+      "마지막 글자 '" + last + "'로 시작해야 해!";
     return;
   }
 
@@ -127,9 +181,8 @@ function play() {
   document.getElementById("used").textContent =
     "사용한 단어: " + used.join(", ");
 
-  msg.textContent =
-    "정답! 다음은 '" + word[word.length - 1] +
-    "'로 시작해!";
+  message.textContent =
+    "정답! 다음은 '" + word[word.length - 1] + "'로 시작해!";
   input.value = "";
 }
 
@@ -142,8 +195,7 @@ function restart() {
   document.getElementById("score").textContent = "0";
   document.getElementById("used").textContent =
     "사용한 단어: " + word;
-  document.getElementById("message").textContent =
-    word + "로 시작하는 단어를 입력해!";
+  message.textContent = word + "로 시작하는 단어를 입력해!";
   document.getElementById("answer").value = "";
 }
 
@@ -151,6 +203,8 @@ function backToMenu() {
   document.getElementById("game").style.display = "none";
   document.getElementById("start").style.display = "block";
 }
+  
+loadDictionary();
 </script>
 </body>
 </html>
