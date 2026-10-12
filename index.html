@@ -114,31 +114,37 @@ let deadline = 0;
 let gameOver = false;function allowedFirstLetters(char) {
   const result = [char];
   const code = char.charCodeAt(0);
+
   if (code < 44032 || code > 55203) return result;
 
   const n = code - 44032;
   const initial = Math.floor(n / 588);
   const vowel = Math.floor((n % 588) / 28);
   const tail = n % 28;
+  const newInitials = [];
 
-  let newInitial = -1;
+  // ㄹ → ㄴ 또는 ㅇ
+  if (initial === 5) {
+    newInitials.push(2);
 
-  if (
-    (initial === 2 || initial === 5) &&
-    [2,3,6,7,12,17,20].includes(vowel)
-  ) {
-    newInitial = 11;
-  } else if (initial === 5) {
-    newInitial = 2;
+    if ([2,3,6,7,12,17,20].includes(vowel)) {
+      newInitials.push(11);
+    }
   }
 
-  if (newInitial !== -1) {
+  // ㄴ → ㅇ
+  if (initial === 2 &&
+      [2,3,6,7,12,17,20].includes(vowel)) {
+    newInitials.push(11);
+  }
+
+  for (const newInitial of newInitials) {
     result.push(String.fromCharCode(
       44032 + newInitial * 588 + vowel * 28 + tail
     ));
   }
 
-  return result;
+  return [...new Set(result)];
 }
 
 function prepareDictionary(text) {
@@ -169,6 +175,7 @@ function prepareDictionary(text) {
 
 async function loadDictionary() {
   if (loading) return;
+
   loading = true;
   dictionaryReady = false;
   $("retry").hidden = true;
@@ -191,6 +198,7 @@ async function loadDictionary() {
       );
 
       let response;
+
       try {
         response = await fetch(DICT_URL, {
           signal: controller.signal
@@ -205,6 +213,7 @@ async function loadDictionary() {
 
       if ("caches" in window) {
         const cache = await caches.open(CACHE_NAME);
+
         await cache.put(
           DICT_URL,
           new Response(text, {
@@ -236,10 +245,11 @@ function hasNextWord(candidate) {
 
   for (const first of allowed) {
     const count = firstCounts.get(first) || 0;
+
     if (count === 0) continue;
 
-    // 사용한 단어만 제외하고 가능한 단어가 있는지 확인
     let usedWithFirst = 0;
+
     for (const w of used) {
       if (w[0] === first) usedWithFirst++;
     }
@@ -307,27 +317,34 @@ function startTimer() {
     $("timer").textContent = secondsLeft + "초";
     $("timer").classList.toggle("low", secondsLeft <= 5);
 
-    if (secondsLeft <= 0) {
-      timeOut();
-    }
+    if (secondsLeft <= 0) timeOut();
   }, 200);
 }
 
 function nextPlayer() {
   for (let i = 0; i < playerCount; i++) {
     currentPlayer = (currentPlayer + 1) % playerCount;
+
     if (lives[currentPlayer] > 0) return;
   }
   }function checkWinner() {
   const alive = lives.filter(n => n > 0).length;
 
-  if (alive === 1) {
+  if (alive <= 1) {
     gameOver = true;
     stopTimer();
-    const winner = lives.findIndex(n => n > 0) + 1;
-    $("turn").textContent =
-      winner + "번 플레이어 승리!";
-    $("message").textContent = "게임 종료!";
+
+    const winner = lives.findIndex(n => n > 0);
+
+    if (winner !== -1) {
+      $("turn").textContent =
+        (winner + 1) + "번 플레이어 승리!";
+      $("message").textContent = "게임 종료!";
+    } else {
+      $("turn").textContent = "게임 종료!";
+      $("message").textContent = "승자가 없어!";
+    }
+
     $("submit").disabled = true;
     $("answer").disabled = true;
     return true;
@@ -345,16 +362,29 @@ function timeOut() {
 
   if (checkWinner()) {
     render();
-    $("turn").textContent =
-      (lives.findIndex(n => n > 0) + 1) +
-      "번 플레이어 승리!";
     return;
   }
 
   nextPlayer();
+
+  // 목숨이 깎이면 새 랜덤 시작 단어 선택
+  const availableStarts = STARTS.filter(
+    word => !used.has(word)
+  );
+
+  currentWord = availableStarts.length
+    ? availableStarts[
+        Math.floor(Math.random() * availableStarts.length)
+      ]
+    : STARTS[Math.floor(Math.random() * STARTS.length)];
+
+  used.add(currentWord);
+  history.push(currentWord);
+
   $("answer").value = "";
   $("message").textContent =
-    loser + "번 플레이어 시간 초과! 목숨 -1";
+    loser + "번 플레이어 시간 초과! 목숨 -1. 새 단어로 시작!";
+
   startTimer();
 }
 
@@ -427,9 +457,11 @@ function play() {
 function restart() {
   stopTimer();
   gameOver = false;
+
   currentWord = STARTS[
     Math.floor(Math.random() * STARTS.length)
   ];
+
   used = new Set([currentWord]);
   history = [currentWord];
   score = 0;
@@ -439,6 +471,7 @@ function restart() {
   $("answer").disabled = false;
   $("submit").disabled = false;
   $("answer").value = "";
+
   $("message").textContent =
     currentWord + "로 시작하는 단어를 입력해!";
 
