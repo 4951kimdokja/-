@@ -54,10 +54,32 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <h1>끝말잇기</h1>
 
 <section id="menu">
-  <h2>게임 인원 선택</h2>
-  <button class="choice" onclick="startGame(2)">2인전</button>
-  <button class="choice" onclick="startGame(3)">3인전</button>
-  <button class="choice" onclick="startGame(4)">4인전</button>
+  <h2>게임 모드 선택</h2>
+
+  <button class="choice" onclick="showRandomMenu()"
+    style="background:#263b60">
+    🔀 랜덤 매칭
+  </button>
+
+  <button class="choice"
+    onclick="location.href='trophy.html'"
+    style="background:#473b25">
+    🏆 트로피
+  </button>
+
+  <button class="choice" disabled
+    style="background:#303744;border-color:#64748b">
+    👥 친선 대전 (나중에 추가)
+  </button>
+
+  <div id="randomMenu" style="display:none">
+    <h2>게임 인원 선택</h2>
+    <button class="choice" onclick="startGame(2)">2인전</button>
+    <button class="choice" onclick="startGame(3)">3인전</button>
+    <button class="choice" onclick="startGame(4)">4인전</button>
+    <button class="choice" onclick="hideRandomMenu()">뒤로</button>
+  </div>
+
   <p id="status">사전을 불러오는 중...</p>
   <button id="retry" onclick="loadDictionary()" hidden>
     사전 다시 불러오기
@@ -488,7 +510,13 @@ function backToMenu() {
 $("answer").addEventListener("keydown", e => {
   if (e.key === "Enter") play();
 });
+function showRandomMenu() {
+  document.querySelector("#randomMenu").style.display = "block";
+}
 
+function hideRandomMenu() {
+  document.querySelector("#randomMenu").style.display = "none";
+    }
 loadDictionary();
 </script>
 </body>
